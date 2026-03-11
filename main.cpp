@@ -9,6 +9,7 @@
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
+#include <filesystem>
 
 struct ComplexNumber {
 	float Real; float Imaginary;
@@ -86,15 +87,15 @@ uint8_t mod(int n, int k) {
 	return (u_int8_t) round(255*(((float) n)/((float) k)));
 }*/
 
-uint8_t iterate(ComplexNumber c, int max_i) {
+uint8_t iterate_mandelbrot(ComplexNumber c, int max_i) {
 	ComplexNumber oz = ComplexNumber(0, 0);
 	int ot = 0;
 	int nt = 1;
-	int i = 0;
+	int iter = 0;
 	ComplexNumber z = ComplexNumber(0, 0);
-	while (i < max_i) {
+	while (iter < max_i) {
 		z = z*z + c;
-		i++;
+		iter++;
 		if (z.magnitude2() > 4) { break; }
 		if (oz == z) { return 0; }
 		ot++;
@@ -104,19 +105,40 @@ uint8_t iterate(ComplexNumber c, int max_i) {
 			oz = z;
 		}
 	}
-	return mod(i, 50);
+	return mod(iter, 50);
+}
+
+uint8_t iterate_julia(ComplexNumber z, int max_i) {
+	ComplexNumber oz = ComplexNumber(0, 0);
+	int ot = 0;
+	int nt = 1;
+	int iter = 0;
+	ComplexNumber c = ComplexNumber(-0.8, 0.156);
+	while (iter < max_i) {
+		z = z*z + c;
+		iter++;
+		if (z.magnitude2() > 4) { break; }
+		if (oz == z) { return 0; }
+		ot++;
+		if (ot == nt) {
+			nt *= 2;
+			ot = 0;
+			oz = z;
+		}
+	}
+	return mod(iter, 50);
 }
 
 
 std::string colour(std::string_view text, int r, int g, int b) { return std::format("\x1b[38;2;{};{};{}m{}\x1b[0m", r, g, b, text); }
-int index(float re, float im, float l_l, float l_h, float inc) {
-	int s = (l_h-l_l)/inc;
-	int real = (re-l_l)/inc;
-	int imag = (im-l_l)/inc;
-	return 3*(real+imag*s);
-}
 
-void run(float lim_l, float lim_h, float lim_i, int max_i, std::string f_name) {
+void run(float lim_l, float lim_h, float lim_i, int max_i, std::string which, std::string f_name) {
+	uint8_t w = 0;
+	if (which == "mandelbrot") {
+		w = 1;
+	} else if (which == "julia") {
+		w = 2;
+	}
 	auto start = std::chrono::high_resolution_clock::now();
 	std::vector<uint8_t> image;
 	int s = std::round((lim_h - lim_l) / lim_i) + 1;
@@ -126,10 +148,17 @@ void run(float lim_l, float lim_h, float lim_i, int max_i, std::string f_name) {
 		float imag = lim_l + y * lim_i;
 		for (int x = 0; x < s; ++x) {
 			float real = lim_l + x * lim_i;
-			image[(y * s + x) * 3 + 1] = iterate(ComplexNumber(real, imag), max_i);
+			uint8_t val;
+			if (w == 1) {
+				val = iterate_mandelbrot(ComplexNumber(real, imag), max_i);
+			} else if (w == 2) {
+				val = iterate_julia(ComplexNumber(real, imag), max_i);
+			}
+			image[(y * s + x) * 3] = val;
 		}
 	}
-	stbi_write_png((f_name + ".png").c_str(), s, s, 3, image.data(), s*3);
+	std::filesystem::create_directory("Fractals");
+	stbi_write_png(("Fractals/" + f_name + ".png").c_str(), s, s, 3, image.data(), 0);
 	auto end = std::chrono::high_resolution_clock::now();
 	auto total_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 	long long seconds = total_ms / 1000;
@@ -138,5 +167,6 @@ void run(float lim_l, float lim_h, float lim_i, int max_i, std::string f_name) {
 }
 
 int main() {
-	run(-2.5, 2.5, 0.00025, 1000000, "mandelbrot_set");
+	//run(-2.5, 2.5, 0.00025, 1000000, "mandelbrot", "mandelbrot_set");
+	run(-2.5, 2.5, 0.00025, 1000000, "julia", "julia_set");
 }
