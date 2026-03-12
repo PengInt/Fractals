@@ -5,4 +5,6 @@ replit.nix
 .ccls-cache
 .git
 main
-Fractals/
+CMakeLists.txt
+cmake-build-debug/
+.idea/
