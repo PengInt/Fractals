@@ -1,3 +1,8 @@
 Makefile
 .replit
 replit.nix
+.agents
+.ccls-cache
+.git
+main
+Fractals/

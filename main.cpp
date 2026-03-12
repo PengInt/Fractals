@@ -6,6 +6,7 @@
 #include <format>
 #include <vector>
 #include <chrono>
+#include <fstream>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
@@ -29,6 +30,16 @@ struct ComplexNumber {
 		float i1 = Imaginary + other.Imaginary;
 		return ComplexNumber(r1, i1);
 	}
+	ComplexNumber operator-(ComplexNumber other) {
+		float r1 = other.Real / (other.Real*other.Real + other.Imaginary*other.Imaginary);
+		float i1 = -other.Imaginary / (other.Real*other.Real + other.Imaginary*other.Imaginary);
+		return *this * ComplexNumber(r1, i1);
+	}
+	ComplexNumber operator/(ComplexNumber other) {
+		float r1 = Real - other.Real;
+		float i1 = Imaginary - other.Imaginary;
+		return ComplexNumber(r1, i1);
+	}
 
 	ComplexNumber operator*(float other) {
 		float r1 = Real * other;
@@ -37,6 +48,11 @@ struct ComplexNumber {
 	}
 	ComplexNumber operator+(float other) {
 		float r1 = Real + other;
+		float i1 = Imaginary;
+		return ComplexNumber(r1, i1);
+	}
+	ComplexNumber operator-(float other) {
+		float r1 = Real - other;
 		float i1 = Imaginary;
 		return ComplexNumber(r1, i1);
 	}
@@ -64,6 +80,11 @@ ComplexNumber operator*(float other, ComplexNumber self) {
 }
 ComplexNumber operator+(float other, ComplexNumber self) {
 	float r1 = self.Real + other;
+	float i1 = self.Imaginary;
+	return ComplexNumber(r1, i1);
+}
+ComplexNumber operator-(float other, ComplexNumber self) {
+	float r1 = self.Real - other;
 	float i1 = self.Imaginary;
 	return ComplexNumber(r1, i1);
 }
@@ -129,15 +150,72 @@ uint8_t iterate_julia(ComplexNumber z, int max_i) {
 	return mod(iter, 50);
 }
 
+uint8_t iterate_nova(ComplexNumber c, int max_i) {
+	//n=o-(o^p-1)/(po^(p-1))+c  {z0=1} {p = 2}
+	ComplexNumber z = ComplexNumber(1, 0);
+	ComplexNumber oz = z;
+	int ot = 0;
+	int nt = 1;
+	int iter = 0;
+	while (iter < max_i) {
+		z = z - (z * z - 1)/(2 * z) + c;
+		iter ++;
+		if (z.magnitude2() > 10000000000) { break; }
+		ComplexNumber diff = oz - z;
+		if (diff.magnitude2() < 0.00000000000001) { return 0; }
+		ot++;
+		if (ot == nt) {
+			nt *= 2;
+			ot = 0;
+			oz = z;
+		}
+	}
+	return mod(iter, 50);
+}
+
 
 std::string colour(std::string_view text, int r, int g, int b) { return std::format("\x1b[38;2;{};{};{}m{}\x1b[0m", r, g, b, text); }
 
-void run(float lim_l, float lim_h, float lim_i, int max_i, std::string which, std::string f_name) {
+void run(float lim_l, float lim_h, float lim_i, int max_i, std::string which, std::string colour, std::string f_name) {
 	uint8_t w = 0;
 	if (which == "mandelbrot") {
 		w = 1;
 	} else if (which == "julia") {
 		w = 2;
+	} else if (which == "nova") {
+		w = 3;
+	}
+	float c_r = 0;
+	float c_g = 0;
+	float c_b = 0;
+	if (colour == "white") {
+		c_r = 1;
+		c_g = 1;
+		c_b = 1;
+	} else if (colour == "red") {
+		c_r = 1;
+	} else if (colour == "green") {
+		c_g = 1;
+	} else if (colour == "blue") {
+		c_b = 1;
+	} else if (colour == "yellow") {
+		c_r = 1;
+		c_g = 1;
+	} else if (colour == "cyan") {
+		c_g = 1;
+		c_b = 1;
+	} else if (colour == "magenta") {
+		c_r = 1;
+		c_b = 1;
+	} else if (colour == "orange") {
+		c_r = 1;
+		c_g = 0.5;
+	} else if (colour == "turquoise") {
+		c_g = 1;
+		c_b = 0.5;
+	} else if (colour == "purple") {
+		c_r = 0.5;
+		c_b = 1;
 	}
 	auto start = std::chrono::high_resolution_clock::now();
 	std::vector<uint8_t> image;
@@ -148,13 +226,17 @@ void run(float lim_l, float lim_h, float lim_i, int max_i, std::string which, st
 		float imag = lim_l + y * lim_i;
 		for (int x = 0; x < s; ++x) {
 			float real = lim_l + x * lim_i;
-			uint8_t val;
+			uint8_t val = 0;
 			if (w == 1) {
 				val = iterate_mandelbrot(ComplexNumber(real, imag), max_i);
 			} else if (w == 2) {
 				val = iterate_julia(ComplexNumber(real, imag), max_i);
+			} else if (w == 3) {
+				val = iterate_nova(ComplexNumber(real, imag), max_i);
 			}
-			image[(y * s + x) * 3] = val;
+			image[(y * s + x) * 3] = val * c_r;
+			image[(y * s + x) * 3 + 1] = val * c_g;
+			image[(y * s + x) * 3 + 2] = val * c_b;
 		}
 	}
 	std::filesystem::create_directory("Fractals");
@@ -167,6 +249,41 @@ void run(float lim_l, float lim_h, float lim_i, int max_i, std::string which, st
 }
 
 int main() {
-	//run(-2.5, 2.5, 0.00025, 1000000, "mandelbrot", "mandelbrot_set");
-	run(-2.5, 2.5, 0.00025, 1000000, "julia", "julia_set");
+	//run(-2.5, 2.5, 0.00025, 1000000, "mandelbrot", "red", "mandelbrot_set");
+	//run(-2.5, 2.5, 0.00025, 1000000, "julia", "red", "julia_set");
+	//run(-2.5, 2.5, 0.0025, 1000, "nova", "red", "nova_set");
+	// Nova Fractal doesn't work - please fix
+
+	std::ifstream cfg("config.cfg");
+	if (!cfg.is_open()) {
+		std::cerr << "Error opening file config.cfg" << std::endl;
+		return 1;
+	}
+
+	std::string line;
+	if (!std::getline(cfg, line)) { std::cerr << "Error reading file config.cfg" << std::endl; }
+	float min = std::stof(line);
+	std::cout << "Minimum: " << min << std::endl;
+	if (!std::getline(cfg, line)) { std::cerr << "Error reading file config.cfg" << std::endl; }
+	float max = std::stof(line);
+	std::cout << "Maximum: " << max << std::endl;
+	if (!std::getline(cfg, line)) { std::cerr << "Error reading file config.cfg" << std::endl; }
+	float inc = std::stof(line);
+	std::cout << "Increment: " << inc << std::endl;
+	if (!std::getline(cfg, line)) { std::cerr << "Error reading file config.cfg" << std::endl; }
+	float max_i = std::stof(line);
+	std::cout << "Maximum iterations: " << max_i << std::endl;
+	if (!std::getline(cfg, line)) { std::cerr << "Error reading file config.cfg" << std::endl; }
+	std::string type = line;
+	std::cout << "Type: " << type << std::endl;
+	if (!std::getline(cfg, line)) { std::cerr << "Error reading file config.cfg" << std::endl; }
+	std::string c = line;
+	std::cout << "Colour: " << c << std::endl;
+	if (!std::getline(cfg, line)) { std::cerr << "Error reading file config.cfg" << std::endl; }
+	std::string f_name = line;
+	std::cout << "File name: (Fractals/) " << f_name << ".png" << std::endl;
+	std::cout << "\nStarting...        " << std::flush;
+
+	run(min, max, inc, max_i, type, c, f_name);
+	return 0;
 }
