@@ -108,12 +108,12 @@ uint8_t mod(int n, int k) {
 	return (u_int8_t) round(255*(((float) n)/((float) k)));
 }*/
 
-uint8_t iterate_mandelbrot(ComplexNumber c, int max_i) {
-	ComplexNumber oz = ComplexNumber(0, 0);
+uint8_t iterate_mandelbrot(ComplexNumber c, int max_i, float r0, float i0) {
+	ComplexNumber z = ComplexNumber(r0, i0);
+	ComplexNumber oz = z;
 	int ot = 0;
 	int nt = 1;
 	int iter = 0;
-	ComplexNumber z = ComplexNumber(0, 0);
 	while (iter < max_i) {
 		z = z*z + c;
 		iter++;
@@ -129,12 +129,12 @@ uint8_t iterate_mandelbrot(ComplexNumber c, int max_i) {
 	return mod(iter, 50);
 }
 
-uint8_t iterate_julia(ComplexNumber z, int max_i) {
+uint8_t iterate_julia(ComplexNumber z, int max_i, float cr, float ci) {
 	ComplexNumber oz = ComplexNumber(0, 0);
 	int ot = 0;
 	int nt = 1;
 	int iter = 0;
-	ComplexNumber c = ComplexNumber(-0.8, 0.156);
+	ComplexNumber c = ComplexNumber(cr, ci);
 	while (iter < max_i) {
 		z = z*z + c;
 		iter++;
@@ -150,9 +150,9 @@ uint8_t iterate_julia(ComplexNumber z, int max_i) {
 	return mod(iter, 50);
 }
 
-uint8_t iterate_nova(ComplexNumber c, int max_i) {
+uint8_t iterate_nova(ComplexNumber c, int max_i, float r0, float c0) {
 	//n=o-(o^p-1)/(po^(p-1))+c  {z0=1} {p = 2}
-	ComplexNumber z = ComplexNumber(1, 0);
+	ComplexNumber z = ComplexNumber(1+r0, 0+c0);
 	ComplexNumber oz = z;
 	int ot = 0;
 	int nt = 1;
@@ -176,7 +176,7 @@ uint8_t iterate_nova(ComplexNumber c, int max_i) {
 
 std::string colour(std::string_view text, int r, int g, int b) { return std::format("\x1b[38;2;{};{};{}m{}\x1b[0m", r, g, b, text); }
 
-void run(float lim_l, float lim_h, float lim_i, int max_i, std::string which, std::string colour, std::string f_name) {
+void run(float lim_l, float lim_h, float lim_i, int max_i, std::string which, std::string colour, std::string f_name, float r0, float i0) {
 	uint8_t w = 0;
 	if (which == "mandelbrot") {
 		w = 1;
@@ -223,16 +223,16 @@ void run(float lim_l, float lim_h, float lim_i, int max_i, std::string which, st
 	image.assign(s * s * 3, 0);
 	#pragma omp parallel for schedule(dynamic)
 	for (int y = 0; y < s; ++y) {
-		float imag = lim_l + y * lim_i;
+		float imag = -(lim_l + y * lim_i);
 		for (int x = 0; x < s; ++x) {
 			float real = lim_l + x * lim_i;
 			uint8_t val = 0;
 			if (w == 1) {
-				val = iterate_mandelbrot(ComplexNumber(real, imag), max_i);
+				val = iterate_mandelbrot(ComplexNumber(real, imag), max_i, r0, i0);
 			} else if (w == 2) {
-				val = iterate_julia(ComplexNumber(real, imag), max_i);
+				val = iterate_julia(ComplexNumber(real, imag), max_i, r0, i0);
 			} else if (w == 3) {
-				val = iterate_nova(ComplexNumber(real, imag), max_i);
+				val = iterate_nova(ComplexNumber(real, imag), max_i, r0, i0);
 			}
 			image[(y * s + x) * 3] = val * c_r;
 			image[(y * s + x) * 3 + 1] = val * c_g;
@@ -281,9 +281,14 @@ int main() {
 	std::cout << "Colour: " << c << std::endl;
 	if (!std::getline(cfg, line)) { std::cerr << "Error reading file config.cfg" << std::endl; }
 	std::string f_name = line;
+	if (!std::getline(cfg, line)) { std::cerr << "Error reading file config.cfg" << std::endl; }
+	float r0 = std::stof(line);
+	if (!std::getline(cfg, line)) { std::cerr << "Error reading file config.cfg" << std::endl; }
+	float i0 = std::stof(line);
+	std::cout << "Number: " << r0 << " + " << i0 << "i" << std::endl;
 	std::cout << "File name: (Fractals/) " << f_name << ".png" << std::endl;
 	std::cout << "\nStarting...        " << std::flush;
 
-	run(min, max, inc, max_i, type, c, f_name);
+	run(min, max, inc, max_i, type, c, f_name, r0, i0);
 	return 0;
 }
