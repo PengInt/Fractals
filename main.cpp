@@ -40,7 +40,8 @@ struct ComplexNumber {
 		float i1 = Imaginary - other.Imaginary;
 		return ComplexNumber(r1, i1);
 	}
-	ComplexNumber operator^(uint8_t other) {
+	template<std::integral T>
+	ComplexNumber operator^(T other) {
 		ComplexNumber n = ComplexNumber(1, 0);
 		for (uint8_t i = 0; i < other; i++) {
 			n = n * *this;
@@ -91,8 +92,8 @@ ComplexNumber operator+(float other, ComplexNumber self) {
 	return ComplexNumber(r1, i1);
 }
 ComplexNumber operator-(float other, ComplexNumber self) {
-	float r1 = self.Real - other;
-	float i1 = self.Imaginary;
+	float r1 = other - self.Real;
+	float i1 = -self.Imaginary;
 	return ComplexNumber(r1, i1);
 }
 
@@ -160,7 +161,7 @@ uint8_t iterate_julia(ComplexNumber z, int max_i, float cr, float ci, int k) {
 // FIX NOVA FRACTAL
 uint8_t iterate_nova(ComplexNumber c, int max_i, float r0, float i0, int k) {
 	//n=o-(o^p-1)/(po^(p-1))+c  {z0=1}
-	uint8_t p = 3;
+	uint8_t p = 4;
 	ComplexNumber z = ComplexNumber(1+r0, 0+i0);
 	ComplexNumber oz = z;
 	int iter = 0;
@@ -171,7 +172,8 @@ uint8_t iterate_nova(ComplexNumber c, int max_i, float r0, float i0, int k) {
 		iter ++;
 		ComplexNumber diff = oz - z;
 		if (diff.magnitude2() < 0.0000001) { return mod(iter, k); }
-		if (z.magnitude2() > 1e10) { break; }
+		//if (z.magnitude2() > 1e10) { break; }
+		// Reason - nova fractals don't care about escaping to infinity
 		oz = z;
 	}
 	return 0;
