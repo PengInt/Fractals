@@ -9,7 +9,7 @@
 #include <fstream>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
+#include "include/stb_image_write.h"
 #include <filesystem>
 
 struct ComplexNumber {
@@ -97,8 +97,6 @@ ComplexNumber operator-(float other, ComplexNumber self) {
 	return ComplexNumber(r1, i1);
 }
 
-bool within(std::vector<ComplexNumber> vect, ComplexNumber val) { for (ComplexNumber c : vect) { if (c == val) { return true; } } return false; }
-
 const ComplexNumber i = ComplexNumber(0, 1);
 
 uint8_t mod(int n, int k) {
@@ -112,9 +110,6 @@ uint8_t mod(int n, int k) {
 
 	return static_cast<uint8_t>(std::clamp(intensity, 0.0f, 255.0f));
 }
-/*u_int8_t mod(int n, int k) {
-	return (u_int8_t) round(255*(((float) n)/((float) k)));
-}*/
 
 uint8_t iterate_mandelbrot(ComplexNumber c, int max_i, float r0, float i0, int k) {
 	ComplexNumber z = ComplexNumber(r0, i0);
