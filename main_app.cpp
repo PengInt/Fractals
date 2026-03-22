@@ -1,4 +1,5 @@
 // The app embodiment of main_png
+// Version a1.0.1
 #include <iostream>
 #include <string>
 #include <cmath>
@@ -146,6 +147,9 @@ public:
 		s_x = 2.5;
 		s_y = 2.5*(((float) h)/((float) w));
 	}
+	void RecalculateSize(int w, int h) {
+		s_y = s_x*(((float) h)/((float) w));
+	}
 	std::vector<float> get_info(int w, int h) {
 		float right = real + s_x;
 		float left = real - s_x;
@@ -179,31 +183,35 @@ int main() {
 
 	std::string line;
 	if (!std::getline(cfg, line)) { std::cerr << "Error reading file app-settings.cfg" << std::endl; }
-	const int w = std::stoi(line);
+	int w = std::stoi(line);
+	const int cw = w;
 	std::cout << "Width: " << w << std::endl;
 	if (!std::getline(cfg, line)) { std::cerr << "Error reading file app-settings.cfg" << std::endl; }
-	const int h = std::stoi(line);
+	int h = std::stoi(line);
+	const int ch = h;
 	std::cout << "Height: " << h << std::endl;
 	if (!std::getline(cfg, line)) { std::cerr << "Error reading file app-settings.cfg" << std::endl; }
 	const int max_i = std::stoi(line);
 	std::cout << "Maximum iterations: " << max_i << std::endl;
 	if (!std::getline(cfg, line)) { std::cerr << "Error reading file app-settings.cfg" << std::endl; }
-	std::string t = line;
+	const std::string t = line;
 	std::cout << "Type: " << t << std::endl;
 	if (!std::getline(cfg, line)) { std::cerr << "Error reading file app-settings.cfg" << std::endl; }
-	std::string c = line;
+	const std::string c = line;
 	std::cout << "Colour: " << c << std::endl;
 	if (!std::getline(cfg, line)) { std::cerr << "Error reading file app-settings.cfg" << std::endl; }
-	int k = std::stoi(line);
+	const int k = std::stoi(line);
 	std::cout << "K: " << k << std::endl;
 
 	uint8_t type = 0;
 	if (t == "mandelbrot") {
 		type = 1;
-	} else if (t == "julia swirl") {
+	} else if (t == "julia") {
 		type = 3;
-	} else if (t == "julia crystal") {
+	} else if (t == "julia swirl") {
 		type = 4;
+	} else if (t == "julia crystal") {
+		type = 5;
 	} else if (t == "nova") {
 		type = 2;
 	}
@@ -243,6 +251,7 @@ int main() {
 
 	const Vector3 C = {c_r, c_g, c_b};
 
+	SetConfigFlags(FLAG_WINDOW_RESIZABLE|FLAG_VSYNC_HINT);
 	InitWindow(w, h, "Fractal Renderer");
 	SetTargetFPS(60);
 
@@ -250,8 +259,9 @@ int main() {
 
 	Shader shader = { 0 };
 	if (type == 1) shader = LoadShader(0, "mandelbrot.fs");
-	else if (type == 3) shader = LoadShader(0, "julia_swirl.fs");
-	else if (type == 4) shader = LoadShader(0, "julia_crystal.fs");
+	else if (type == 3) shader = LoadShader(0, "julia.fs");
+	else if (type == 4) shader = LoadShader(0, "julia_swirl.fs");
+	else if (type == 5) shader = LoadShader(0, "julia_crystal.fs");
 	else std::cerr << "no fs" << std::endl;
 	int left_loc = GetShaderLocation(shader, "u_l");
 	int top_loc = GetShaderLocation(shader, "u_t");
@@ -262,10 +272,38 @@ int main() {
 	int c_loc = GetShaderLocation(shader, "u_colour");
 	int k_loc = GetShaderLocation(shader, "k");
 
-	const Vector2 res = {(float) w, (float) h};
+	Vector2 res = {(float) w, (float) h};
 
+	bool borderless = false;
 	bool updateScreen = true;
 	while (!WindowShouldClose()) {
+		if (IsKeyPressed(KEY_F11)) {
+			int monitor = GetCurrentMonitor();
+			borderless = !borderless;
+			if (borderless) {
+				SetWindowState(FLAG_WINDOW_UNDECORATED);
+				SetWindowSize(GetMonitorWidth(monitor), GetMonitorHeight(monitor));
+				SetWindowPosition(0, 0);
+			} else {
+				ClearWindowState(FLAG_WINDOW_UNDECORATED);
+				SetWindowSize(cw, ch);
+				SetWindowPosition(GetMonitorWidth(monitor)/2-cw/2, GetMonitorHeight(monitor)/2-ch/2);
+			}
+			/*if (IsWindowFullscreen()) {
+				ToggleFullscreen();
+				SetWindowSize(cw, ch);
+			} else {
+				SetWindowSize(GetMonitorWidth(monitor), GetMonitorHeight(monitor));
+				ToggleFullscreen();
+			}*/
+		}
+		if (IsWindowResized()) {
+			w = GetScreenWidth();
+			h = GetScreenHeight();
+			cam.RecalculateSize(w, h);
+			res = {(float) w, (float) h};
+			updateScreen = true;
+		}
 		if (IsKeyDown(KEY_W)) {
 			cam.move(0, 1);
 			updateScreen = true;

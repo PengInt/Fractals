@@ -39,9 +39,9 @@ void main() {
     float y = floor(res.y - gl_FragCoord.y);
     float real = u_l + (u_i_x * x);
     float imag = u_t - (u_i_y * y);
-    vec2 c = vec2(real, imag);
+    vec2 z = vec2(real, imag);
 
-    vec2 z = vec2(0.0);
+    vec2 c = vec2(0, -1);
     int iter = 0;
 
     vec2 oz = vec2(0.0);
