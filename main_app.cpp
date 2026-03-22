@@ -156,16 +156,16 @@ public:
 		return {left, right, bottom, top, inc_x, inc_y};
 	}
 	void move(int l_r, int d_u) {
-		real += s_x*0.2*l_r;
-		imag += s_y*0.2*d_u;
+		real += s_x*0.02*l_r;
+		imag += s_y*0.02*d_u;
 	}
 	void zoom(bool in) {
 		if (in) {
-			s_x *= 0.8;
-			s_y *= 0.8;
+			s_x *= 0.9765625;
+			s_y *= 0.9765625;
 		} else {
-			s_x *= 1.25;
-			s_y *= 1.25;
+			s_x *= 1.024;
+			s_y *= 1.024;
 		}
 	}
 };
@@ -200,10 +200,12 @@ int main() {
 	uint8_t type = 0;
 	if (t == "mandelbrot") {
 		type = 1;
-	} else if (t == "julia") {
-		type = 2;
-	} else if (t == "nova") {
+	} else if (t == "julia swirl") {
 		type = 3;
+	} else if (t == "julia crystal") {
+		type = 4;
+	} else if (t == "nova") {
+		type = 2;
 	}
 
 	float c_r = 0;
@@ -246,7 +248,11 @@ int main() {
 
 	Cam cam = Cam(w, h);
 
-	Shader shader = LoadShader(0, "mandelbrot.fs");
+	Shader shader = { 0 };
+	if (type == 1) shader = LoadShader(0, "mandelbrot.fs");
+	else if (type == 3) shader = LoadShader(0, "julia_swirl.fs");
+	else if (type == 4) shader = LoadShader(0, "julia_crystal.fs");
+	else std::cerr << "no fs" << std::endl;
 	int left_loc = GetShaderLocation(shader, "u_l");
 	int top_loc = GetShaderLocation(shader, "u_t");
 	int x_inc_loc = GetShaderLocation(shader, "u_i_x");
@@ -260,22 +266,22 @@ int main() {
 
 	bool updateScreen = true;
 	while (!WindowShouldClose()) {
-		if (IsKeyPressed(KEY_W)) {
+		if (IsKeyDown(KEY_W)) {
 			cam.move(0, 1);
 			updateScreen = true;
-		} else if (IsKeyPressed(KEY_A)) {
+		}  if (IsKeyDown(KEY_A)) {
 			cam.move(-1, 0);
 			updateScreen = true;
-		} else if (IsKeyPressed(KEY_S)) {
+		}  if (IsKeyDown(KEY_S)) {
 			cam.move(0, -1);
 			updateScreen = true;
-		} else if (IsKeyPressed(KEY_D)) {
+		}  if (IsKeyDown(KEY_D)) {
 			cam.move(1, 0);
 			updateScreen = true;
-		} else if (IsKeyPressed(KEY_MINUS)) {
+		}  if (IsKeyDown(KEY_MINUS)) {
 			cam.zoom(false);
 			updateScreen = true;
-		} else if (IsKeyPressed(KEY_EQUAL)) {
+		}  if (IsKeyDown(KEY_EQUAL)) {
 			cam.zoom(true);
 			updateScreen = true;
 		}
